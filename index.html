@@ -20,17 +20,65 @@
 
     <section class="main-content">
       <h1>
-<a id="installation-de-freebsd-avec-mfsbsd-sur-serveur-ovh-so-you-start" class="anchor" href="#installation-de-freebsd-avec-mfsbsd-sur-serveur-ovh-so-you-start" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Installation de FreeBSD avec mfsBSD sur serveur OVH "So You Start"</h1>
+<a id="remplacer-le-raid-1-par-zfs-raidz-par-sur-serveur-ovh-so-you-start" class="anchor" href="#remplacer-le-raid-1-par-zfs-raidz-par-sur-serveur-ovh-so-you-start" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Remplacer le RAID 1 par ZFS RAIDZ par sur serveur OVH "So You Start"</h1>
 
-<p>mfsBSD est un ensemble de scripts permettant de créer une image bootable de FreeBSD qui est entièrement chargée dans la RAM. C'est un outil précieux grâce auquel on peut par exemple facilement installer un système FreeBSD sur un serveur n'offrant que des distributions Linux (mfsBSD a d'ailleurs été inspiré par un autre projet nommé depenguinator.)</p>
+<p>Ce serveur a trois disques SSD de 120 Go. La FAQ d'OVH indique que dans ce cas les disques sont en RAID 5.</p>
+
+<blockquote>
+<p>Par défaut, si votre serveur dispose de 2 disques SATA (ou SSD) il sera installé avec un RAID 1 (RAID 5 si 3 disques SATA ou SSD). En RAID 1, les disques étant en miroir, vous disposerez de façon effective de la capacité d'un seul des disques.</p>
+</blockquote>
+
+<p>Quoi qu'il en soit, FreeBSD est un système de "Tier 1" pour le support de ZFS, autant en profiter et utiliser les 3 disques pour une installation "Root on ZFS". Cette configuration garantit que le système résiste à la défaillance d'un des disques durs et l'espace disponible est de 120 Go ce qui convient parfaitement pour des projets ne nécessitant pas des terabytes de données.</p>
+
+<h2>
+<a id="désactiver-le-raid" class="anchor" href="#d%C3%A9sactiver-le-raid" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Désactiver le RAID</h2>
+
+<p>Pour désactiver le RAID, dans le manager OVH, choisir un template FreeBSD et sélectionner l'option «Installation Personnalisée.»</p>
 
 <p><img src="https://raw.githubusercontent.com/partyline/log/gh-pages/img/ovh-1.png" alt="OVH Manager - Screenshot 1"></p>
 
+<p>Cocher ensuite l'option pour «installer le système uniquement sur 1 disque»</p>
+
 <p><img src="https://raw.githubusercontent.com/partyline/log/gh-pages/img/ovh-2.png" alt="OVH Manager - Screenshot 2"></p>
+
+<h2>
+<a id="installer-freebsd-sur-un-pool-zfs-de-3-disques" class="anchor" href="#installer-freebsd-sur-un-pool-zfs-de-3-disques" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Installer FreeBSD sur un pool zfs de 3 disques</h2>
+
+<p>La procédure la plus simple est d'utiliser mfsBSD pour installer FreeBSD selon cette configuration.</p>
+
+<p>mfsBSD est un ensemble de scripts permettant de créer une image bootable de FreeBSD qui est entièrement chargée dans la RAM. C'est un outil précieux grâce auquel on peut par exemple facilement installer un système FreeBSD sur un serveur n'offrant que des distributions Linux (mfsBSD a d'ailleurs été inspiré par un autre projet nommé depenguinator.)</p>
+
+<p>Pour générer une image bootable, le script doit être lancé sur un système FreeBSD, il est possible de booter sur le serveur, puisqu'on y a installé FreeBSD 10, ou bien d'utiliser une machine virtuelle.</p>
+
+<p>Récupérer l'archive de mfsBSD.</p>
 
 <pre><code>fetch http://github.com/mmatuska/mfsbsd/archive/2.2.tar.gz
 tar xzvf 2.2.tar.gz
 </code></pre>
+
+<p>Configurer mfsBSD</p>
+
+<p>Au minimum, configurer l'interface réseau en DHCP (le temps de l'installation)</p>
+
+<pre><code>cd mfsbsd-2.2/conf
+cp rc.conf.sample rc.conf
+vi rc.conf
+</code></pre>
+
+<p>Décommenter la ligne <code>ifconfig_rl0="DHCP"</code> et vérifier le nom de l'interface. Dans mon cas : <code>ifconfig_em0="DHCP"</code></p>
+
+<pre><code>cp loader.conf.sample loader.conf
+vi loader.conf
+</code></pre>
+
+<p>Changer le mot de passe root à la ligne <code>mfsbsd.rootpw="foobar"</code> dans le fichier <code>loader.conf</code>.</p>
+
+<h2>
+<a id="rebooter-sur-le-système-rescue" class="anchor" href="#rebooter-sur-le-syst%C3%A8me-rescue" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Rebooter sur le système Rescue</h2>
+
+<p>Dans le manager d'OVH.</p>
+
+<p>![OVH Manager - Screenshot 3](<a href="https://raw.githubusercontent.com/partyline/log/gh-pages/img/ovh-3.png">https://raw.githubusercontent.com/partyline/log/gh-pages/img/ovh-3.png</a></p>
 
 <h3>
 <a id="so-you-start" class="anchor" href="#so-you-start" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>So You Start</h3>
