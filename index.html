@@ -50,17 +50,18 @@
 
 <p>Pour générer une image bootable, le script doit être lancé sur un système FreeBSD, il est possible de booter sur le serveur, puisqu'on y a installé FreeBSD 10, ou bien d'utiliser une machine virtuelle.</p>
 
-<p>Récupérer l'archive de mfsBSD.</p>
+<p>Récupérer l'archive de mfsBSD et l'iso de FreeBSD</p>
 
-<pre><code>fetch http://github.com/mmatuska/mfsbsd/archive/2.2.tar.gz
-tar xzvf 2.2.tar.gz
+<pre><code>ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/amd64/ISO-IMAGES/10.3/FreeBSD-10.3-RELEASE-amd64-disc1.iso
+fetch http://github.com/mmatuska/mfsbsd/archive/2.2.tar.gz
 </code></pre>
 
 <p>Configurer mfsBSD</p>
 
 <p>Au minimum, configurer l'interface réseau en DHCP (le temps de l'installation)</p>
 
-<pre><code>cd mfsbsd-2.2/conf
+<pre><code>tar xzvf 2.2.tar.gz
+cd mfsbsd-2.2/conf
 cp rc.conf.sample rc.conf
 vi rc.conf
 </code></pre>
@@ -73,39 +74,93 @@ vi loader.conf
 
 <p>Changer le mot de passe root à la ligne <code>mfsbsd.rootpw="foobar"</code> dans le fichier <code>loader.conf</code>.</p>
 
+<p>En root</p>
+
+<pre><code># mdconfig -a -t vnode -u 10 -f FreeBSD-10.3-RELEASE-amd64-disc1.iso
+# mkdir /media/cdrom
+# mount_cd9660 /dev/md10 /media/cdrom/
+# make PKG_STATIC=/usr/local/sbin/pkg-static BASE=/media/cdrom/usr/freebsd-dist
+</code></pre>
+
 <h2>
 <a id="rebooter-sur-le-système-rescue" class="anchor" href="#rebooter-sur-le-syst%C3%A8me-rescue" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Rebooter sur le système Rescue</h2>
 
 <p>Dans le manager d'OVH.</p>
 
-<p>![OVH Manager - Screenshot 3](<a href="https://raw.githubusercontent.com/partyline/log/gh-pages/img/ovh-3.png">https://raw.githubusercontent.com/partyline/log/gh-pages/img/ovh-3.png</a></p>
+<p><img src="https://raw.githubusercontent.com/partyline/log/gh-pages/img/ovh-3.png" alt="OVH Manager - Screenshot 3"></p>
+
+<p>Copier l'iso de mfsBSD sur le premier disque dur du serveur (ici <code>/dev/ada0</code>), avec <code>dd</code> via <code>ssh</code></p>
+
+<pre><code>dd if=mfsbsd-10.3-RELEASE-amd64.img | ssh root@&lt;your-ip&gt; 'dd of=/dev/ada0 bs=1M'
+</code></pre>
+
+<p>On reboote maintenant sur le disque dur du serveur (le changer dans le manager) qui va charger en mémoire mfsBSD et nous permettre d'utiliser les disques comme on l'entend !</p>
+
+<pre><code>FreeBSD 10.3-RELEASE (GENERIC) #0 r297264: Fri Mar 25 02:10:02 UTC 2016
+
+Welcome to mfsBSD, the memory based FreeBSD distribution.
+
+This is a stripped-down version of FreeBSD without:
+- manual pages, info pages, examples
+- include files, static library files, development tools
+- bind binaries (host, dig, named, etc.)
+
+Feel free to email me with any bug reports or feature suggestions.
+Martin Matuska &lt;mm@FreeBSD.org&gt;
+http://mfsbsd.vx.sk/
+</code></pre>
+
+<p>Pour un guide complet sur la façon de procéder se référer au <a href="https://wiki.freebsd.org/RootOnZFS/GPTZFSBoot/Mirror">wiki</a> On peut aussi lancer l'installateur, choisir l'option ZFS on root guided</p>
+
+<pre><code># bsdinstall
+</code></pre>
+
+<pre><code>% gpart show
+=&gt;       34  234441581  ada0  GPT  (112G)
+         34          6        - free -  (3.0K)
+         40       1024     1  freebsd-boot  (512K)
+       1064        984        - free -  (492K)
+       2048   25165824     2  freebsd-swap  (12G)
+   25167872  209272832     3  freebsd-zfs  (100G)
+  234440704        911        - free -  (456K)
+
+=&gt;       34  234441581  ada1  GPT  (112G)
+         34          6        - free -  (3.0K)
+         40       1024     1  freebsd-boot  (512K)
+       1064        984        - free -  (492K)
+       2048   25165824     2  freebsd-swap  (12G)
+   25167872  209272832     3  freebsd-zfs  (100G)
+  234440704        911        - free -  (456K)
+
+=&gt;       34  234441581  ada2  GPT  (112G)
+         34          6        - free -  (3.0K)
+         40       1024     1  freebsd-boot  (512K)
+       1064        984        - free -  (492K)
+       2048   25165824     2  freebsd-swap  (12G)
+   25167872  209272832     3  freebsd-zfs  (100G)
+  234440704        911        - free -  (456K)
+</code></pre>
+
+<pre><code>zpool status
+  pool: zroot
+ state: ONLINE
+  scan: none requested
+config:
+
+    NAME        STATE     READ WRITE CKSUM
+    zroot       ONLINE       0     0     0
+      raidz1-0  ONLINE       0     0     0
+        ada0p3  ONLINE       0     0     0
+        ada1p3  ONLINE       0     0     0
+        ada2p3  ONLINE       0     0     0
+
+errors: No known data errors
+</code></pre>
 
 <h3>
 <a id="so-you-start" class="anchor" href="#so-you-start" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>So You Start</h3>
 
 <p>Une gamme intermédiaire de serveurs dédiés chez OVH à des tarifs intéressants.<a href="https://www.soyoustart.com/en/offers/e3-ssd-2.xml">e3-ssd-2</a></p>
-
-<p>This automatic page generator is the easiest way to create beautiful pages for all of your projects. Author your page content here <a href="https://guides.github.com/features/mastering-markdown/">using GitHub Flavored Markdown</a>, select a template crafted by a designer, and publish. After your page is generated, you can check out the new <code>gh-pages</code> branch locally. If you’re using GitHub Desktop, simply sync your repository and you’ll see the new branch.</p>
-
-<h3>
-<a id="designer-templates" class="anchor" href="#designer-templates" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Designer Templates</h3>
-
-<p>We’ve crafted some handsome templates for you to use. Go ahead and click 'Continue to layouts' to browse through them. You can easily go back to edit your page before publishing. After publishing your page, you can revisit the page generator and switch to another theme. Your Page content will be preserved.</p>
-
-<h3>
-<a id="creating-pages-manually" class="anchor" href="#creating-pages-manually" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Creating pages manually</h3>
-
-<p>If you prefer to not use the automatic generator, push a branch named <code>gh-pages</code> to your repository to create a page manually. In addition to supporting regular HTML content, GitHub Pages support Jekyll, a simple, blog aware static site generator. Jekyll makes it easy to create site-wide headers and footers without having to copy them across every page. It also offers intelligent blog support and other advanced templating features.</p>
-
-<h3>
-<a id="authors-and-contributors" class="anchor" href="#authors-and-contributors" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Authors and Contributors</h3>
-
-<p>You can @mention a GitHub username to generate a link to their profile. The resulting <code>&lt;a&gt;</code> element will link to the contributor’s GitHub Profile. For example: In 2007, Chris Wanstrath (<a href="https://github.com/defunkt" class="user-mention">@defunkt</a>), PJ Hyett (<a href="https://github.com/pjhyett" class="user-mention">@pjhyett</a>), and Tom Preston-Werner (<a href="https://github.com/mojombo" class="user-mention">@mojombo</a>) founded GitHub.</p>
-
-<h3>
-<a id="support-or-contact" class="anchor" href="#support-or-contact" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Support or Contact</h3>
-
-<p>Having trouble with Pages? Check out our <a href="https://help.github.com/pages">documentation</a> or <a href="https://github.com/contact">contact support</a> and we’ll help you sort it out.</p>
 
       <footer class="site-footer">
         <span class="site-footer-owner"><a href="https://github.com/partyline/log">Log</a> is maintained by <a href="https://github.com/partyline">partyline</a>.</span>
